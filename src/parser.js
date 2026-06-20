@@ -153,7 +153,11 @@ function isGroupRecord(obj) {
   const label = firstString(obj, LABEL_FIELDS);
   if (!id || !label) return false;
   const type = firstString(obj, ['type', 'entity_type', 'entityType', 'record_type', 'recordType', 'kind', 'collection']);
-  return /group|folder/i.test(type) || obj.parent_id !== undefined || obj.parentId !== undefined;
+  if (/group|folder/i.test(type)) return true;
+  if (obj.parent_id !== undefined || obj.parentId !== undefined) return true;
+  const keys = Object.keys(obj).filter(k => !k.startsWith('__'));
+  if (keys.length <= 2 && keys.includes('version') && keys.includes('label')) return true;
+  return false;
 }
 
 function isSshConfigRecord(obj) {
@@ -562,7 +566,14 @@ function resolveGroupPath(obj, groupsById) {
   const direct = firstString(obj, ['group_path', 'groupPath', 'groups', 'group', 'folder_path', 'folderPath', 'folder', 'folder_name', 'folderName', 'group_name', 'groupName']);
   if (direct) return direct;
   const groupId = firstString(obj, ['group_id', 'groupId', 'folder_id', 'folderId', 'parent_id', 'parentId']);
-  return groupId ? buildGroupPath(groupId, groupsById) : '';
+  if (groupId) return buildGroupPath(groupId, groupsById);
+  if (Array.isArray(obj.__termius_nearby_ids) && groupsById.size) {
+    for (const id of obj.__termius_nearby_ids) {
+      const g = groupsById.get(String(id));
+      if (g) return g.label || '';
+    }
+  }
+  return '';
 }
 
 function buildGroupPath(groupId, groupsById) {
