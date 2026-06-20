@@ -19,7 +19,7 @@ const RECORD_ID_FIELDS = ['id', '_id', 'uuid', 'uid', 'identifier', 'local_id', 
 const DIRECT_REFERENCE_ID_FIELDS = ['identity_id', 'identityId', 'credential_id', 'credentialId', 'credentials_id', 'credentialsId', 'account_id', 'accountId', 'auth_id', 'authId', 'authentication_id', 'authenticationId', 'login_id', 'loginId', 'password_id', 'passwordId', 'visible_identity_id', 'visibleIdentityId', '__termius_visible_identity_id'];
 const NESTED_CREDENTIAL_FIELDS = ['identity', 'credential', 'credentials', 'auth', 'authentication', 'account', 'login_credentials', 'loginCredentials', 'ssh', 'ssh_config', 'sshConfig'];
 const CREDENTIAL_LABEL_FIELDS = ['identity', 'credential', 'credentials', 'account', 'identity_label', 'identityLabel', 'credential_label', 'credentialLabel', 'account_label', 'accountLabel'];
-const SSH_CONFIG_FIELDS = ['env_variables', 'envVariables', 'charset', 'agent_forwarding', 'agentForwarding', 'proxycommand', 'startup_snippet', 'startupSnippet', ...PORT_FIELDS];
+const SSH_CONFIG_FIELDS = ['env_variables', 'envVariables', 'charset', 'agent_forwarding', 'agentForwarding', 'proxycommand', 'startup_snippet', 'startupSnippet'];
 const AGENT_FORWARDING_FIELDS = ['agent_forwarding', 'agentForwarding'];
 const PROXY_HOST_FIELDS = ['proxy_hostname', 'proxyHostname', 'proxy_host', 'proxyHost'];
 const PROXY_PORT_FIELDS = ['proxy_port', 'proxyPort'];
@@ -237,8 +237,6 @@ function passwordFingerprint(password) {
   return `${password.length}:${crypto.createHash('sha256').update(password).digest('hex').slice(0, 12)}`;
 }
 
-const SECRET_FIELD_RE = /password|passphrase|private.?key|secret|token|credential/i;
-
 module.exports = {
   BOM, LABEL_FIELDS, HOST_FIELDS, USERNAME_FIELDS, PASSWORD_FIELDS,
   PORT_FIELDS, PROTOCOL_FIELDS, PASSPHRASE_FIELDS, PRIVATE_KEY_FIELDS,
@@ -254,6 +252,5 @@ module.exports = {
   extractPasswordFromObject, extractNestedCredentialPassword,
   extractPrivateKey, extractPassphrase, normalizePrivateKey,
   normalizeProtocol, normalizeTags, makeUniqueLabel, boolValue,
-  sanitizeHostLabel, passwordFingerprint,
-  SECRET_FIELD_RE
+  sanitizeHostLabel, passwordFingerprint
 };

@@ -37,14 +37,32 @@ const flags = { dbPath: null, key: null, keyFile: null, keyInDb: false, autoFlat
 let positional = [];
 
 for (let i = 0; i < args.length; i++) {
-  switch (args[i]) {
-    case '--db-path': flags.dbPath = args[++i]; break;
-    case '--key':     flags.key = args[++i]; break;
-    case '--key-file': flags.keyFile = args[++i]; break;
+  const arg = args[i];
+  let value;
+
+  if (arg.startsWith('--') && arg.includes('=')) {
+    const eq = arg.indexOf('=');
+    const name = arg.slice(0, eq);
+    value = arg.slice(eq + 1);
+    if (name === '--db-path') { flags.dbPath = value; continue; }
+    if (name === '--key') { flags.key = value; continue; }
+    if (name === '--key-file') { flags.keyFile = value; continue; }
+  }
+
+  switch (arg) {
+    case '--db-path':
+      if (i + 1 >= args.length) throw new Error('--db-path requires a value');
+      flags.dbPath = args[++i]; break;
+    case '--key':
+      if (i + 1 >= args.length) throw new Error('--key requires a value');
+      flags.key = args[++i]; break;
+    case '--key-file':
+      if (i + 1 >= args.length) throw new Error('--key-file requires a value');
+      flags.keyFile = args[++i]; break;
     case '--key-is-in-db': flags.keyInDb = true; break;
     case '--auto-flatpak': flags.autoFlatpak = true; break;
     default:
-      if (!args[i].startsWith('-')) positional.push(args[i]);
+      if (!arg.startsWith('-')) positional.push(arg);
   }
 }
 

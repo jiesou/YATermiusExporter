@@ -1,7 +1,7 @@
 'use strict';
 
 const sodium = require('libsodium-wrappers');
-const { ENCRYPTED_BLOCK_RE, extractPasswordFromObject, extractPassphrase, extractPrivateKey, normalizePrivateKey, passwordValueToString, PRIVATE_KEY_RE, PRIVATE_KEY_FIELDS, firstString, LABEL_FIELDS, SSH_CONFIG_FIELDS, PORT_FIELDS, firstPasswordString } = require('./utils');
+const { ENCRYPTED_BLOCK_RE } = require('./utils');
 
 const CONTEXT_RADIUS = 900;
 const NEARBY_ID_RADIUS = 360;
@@ -55,7 +55,6 @@ function decryptBlock(base64Data, key) {
   try {
     const data = Buffer.from(base64Data, 'base64');
     if (data[0] !== 4) return null;
-    const versionOptions = data[1];
     const nonce = data.slice(2, 26);
     const ciphertext = data.slice(26);
     const decrypted = sodium.crypto_secretbox_open_easy(
@@ -91,8 +90,7 @@ function buildMeta(buffer, encryptedStart, encryptedEnd) {
     ssh_config_object_ids: sshConfigRefs.flatMap(ref => ref.ids),
     ssh_config_object_local_ids: sshConfigRefs.flatMap(ref => ref.localIds),
     ssh_config_object_refs: sshConfigRefs.map(ref => ({ ids: ref.ids, localIds: ref.localIds, distance: ref.distance, side: ref.side })),
-    nearby_ids: readNearbyVarints(context, relStart, relEnd).map(e => e.value),
-    nearby_id_entries: readNearbyVarints(context, relStart, relEnd).map(e => ({ value: e.value, distance: e.distance, side: e.side }))
+    nearby_entries: readNearbyVarints(context, relStart, relEnd)
   };
 }
 
@@ -138,16 +136,23 @@ function readNearbyVarints(buffer, encryptedStart, encryptedEnd, maxDist = NEARB
   const values = [];
   const start = Math.max(0, encryptedStart - maxDist);
   const end = Math.min(buffer.length, encryptedEnd + maxDist);
-  for (let i = start; i < end; i++) {
-    if (i >= encryptedStart && i < encryptedEnd) { i = encryptedEnd - 1; continue; }
+
+  for (let i = start; i < encryptedStart; i++) {
     const parsed = readVarintSmall(buffer, i);
     if (!parsed || parsed.end <= i) continue;
-    if (i < encryptedStart && parsed.end > encryptedStart) continue;
-    if (i >= encryptedEnd && parsed.end > end) continue;
+    if (parsed.end > encryptedStart) continue;
     const value = decodeZigZag(parsed.value);
     if (Number.isSafeInteger(value) && value > 1000 && value < 1_000_000_000_000) {
-      const d = distance(i, encryptedStart, encryptedEnd);
-      values.push({ pos: i, value: String(value), dist: d.dist, side: d.side });
+      values.push({ pos: i, value: String(value), dist: encryptedStart - i, side: 'before' });
+    }
+  }
+  for (let i = encryptedEnd; i < end; i++) {
+    const parsed = readVarintSmall(buffer, i);
+    if (!parsed || parsed.end <= i) continue;
+    if (parsed.end > end) continue;
+    const value = decodeZigZag(parsed.value);
+    if (Number.isSafeInteger(value) && value > 1000 && value < 1_000_000_000_000) {
+      values.push({ pos: i, value: String(value), dist: i - encryptedEnd, side: 'after' });
     }
   }
   return dedupeByValue(values).slice(0, 80);

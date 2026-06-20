@@ -67,8 +67,13 @@ function parseDecryptedData(results) {
           const label = firstString(obj, LABEL_FIELDS);
           addToListMap(identitiesByLabel, label, obj);
           collectRecordIds(obj).forEach(id => {
-            if (!identitiesById.has(id) || extractPasswordFromObject(obj, { nested: true })) {
+            if (!identitiesById.has(id)) {
               identitiesById.set(id, obj);
+            } else {
+              const existing = identitiesById.get(id);
+              if (!extractPasswordFromObject(existing, { nested: true }) && extractPasswordFromObject(obj, { nested: true })) {
+                identitiesById.set(id, obj);
+              }
             }
           });
         }
@@ -131,7 +136,10 @@ function applyMetaIds(obj, meta) {
   if (Array.isArray(meta.ssh_config_object_refs) && meta.ssh_config_object_refs.length) {
     obj.__termius_ssh_config_object_refs = meta.ssh_config_object_refs;
   }
-  if (Array.isArray(meta.nearby_ids)) obj.__termius_nearby_ids = meta.nearby_ids;
+  if (Array.isArray(meta.nearby_entries)) {
+    obj.__termius_nearby_ids = meta.nearby_entries.map(e => e.value);
+    obj.__termius_nearby_id_entries = meta.nearby_entries;
+  }
   if (meta.encryptedField) obj.__termius_encrypted_field = meta.encryptedField;
   return obj;
 }
@@ -220,7 +228,7 @@ function attachFieldLevelIdentities(data, fieldParts) {
       applyFieldPartKey(record, key);
       record.__termius_field_order = Math.min(record.__termius_field_order ?? part.recordIndex, part.recordIndex);
       if (!record[part.field]) record[part.field] = part.value;
-      if (Array.isArray(part.meta.nearby_id_entries)) record.__termius_nearby_id_entries.push(...part.meta.nearby_id_entries);
+      if (Array.isArray(part.meta.nearby_entries)) record.__termius_nearby_id_entries.push(...part.meta.nearby_entries);
     });
   });
 
@@ -273,8 +281,13 @@ function addFieldIdentityCandidate(data, identity) {
   addToListMap(data.identitiesByUser, firstString(identity, USERNAME_FIELDS), identity);
   addToListMap(data.identitiesByLabel, firstString(identity, LABEL_FIELDS), identity);
   collectRecordIds(identity).forEach(id => {
-    if (!data.identitiesById.has(id) || extractPasswordFromObject(identity, { nested: true })) {
+    if (!data.identitiesById.has(id)) {
       data.identitiesById.set(id, identity);
+    } else {
+      const existing = data.identitiesById.get(id);
+      if (!extractPasswordFromObject(existing, { nested: true }) && extractPasswordFromObject(identity, { nested: true })) {
+        data.identitiesById.set(id, identity);
+      }
     }
   });
 }
@@ -293,11 +306,12 @@ function addFieldHostDefinitionCandidate(data, record) {
 
 function pairFieldLevelHostCredentials(records) {
   const ordered = records.slice().sort((a, b) => (a.__termius_field_order ?? 0) - (b.__termius_field_order ?? 0));
+  const indexMap = new Map(ordered.map((r, i) => [r, i]));
   const hosts = ordered.filter(r => firstString(r, ['address', 'hostname', ...HOST_FIELDS]));
   const credentials = ordered.filter(r => !firstString(r, ['address', 'hostname', ...HOST_FIELDS]) && (firstPasswordString(r) || firstString(r, USERNAME_FIELDS)));
 
   credentials.forEach(cred => {
-    const host = findNearestBefore(ordered, cred, hosts) || findNearestAfter(ordered, cred, hosts);
+    const host = findNearestBefore(ordered, cred, hosts, indexMap) || findNearestAfter(ordered, cred, hosts, indexMap);
     if (!host) return;
     const username = firstString(cred, USERNAME_FIELDS);
     const password = firstPasswordString(cred);
@@ -306,11 +320,11 @@ function pairFieldLevelHostCredentials(records) {
   });
 }
 
-function findNearestBefore(ordered, ref, candidates) {
-  const idx = ordered.indexOf(ref);
+function findNearestBefore(ordered, ref, candidates, indexMap) {
+  const idx = indexMap.get(ref);
   let best = null, bestDist = Infinity;
   candidates.forEach(h => {
-    const hi = ordered.indexOf(h);
+    const hi = indexMap.get(h);
     if (hi >= 0 && hi < idx && (idx - hi) < bestDist && !firstPasswordString(h)) {
       best = h; bestDist = idx - hi;
     }
@@ -318,11 +332,11 @@ function findNearestBefore(ordered, ref, candidates) {
   return bestDist <= 8 ? best : null;
 }
 
-function findNearestAfter(ordered, ref, candidates) {
-  const idx = ordered.indexOf(ref);
+function findNearestAfter(ordered, ref, candidates, indexMap) {
+  const idx = indexMap.get(ref);
   let best = null, bestDist = Infinity;
   candidates.forEach(h => {
-    const hi = ordered.indexOf(h);
+    const hi = indexMap.get(h);
     if (hi >= 0 && hi > idx && (hi - idx) < bestDist && !firstPasswordString(h)) {
       best = h; bestDist = hi - idx;
     }
@@ -335,6 +349,7 @@ function buildHostConfig(data) {
   if (selected.hostDefinitions.length) {
     return buildFromHostDefinitions(data, selected.hostDefinitions);
   }
+  console.error('     warning: no structured host definitions, falling back to connections');
   return buildFromConnections(data);
 }
 

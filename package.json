@@ -10,7 +10,13 @@
     "bin/",
     "src/"
   ],
-  "keywords": ["termius", "export", "ssh", "backup", "migration"],
+  "keywords": [
+    "termius",
+    "export",
+    "ssh",
+    "backup",
+    "migration"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

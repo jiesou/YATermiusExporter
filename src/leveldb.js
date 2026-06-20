@@ -6,13 +6,13 @@ const os = require('os');
 const snappy = require('snappyjs');
 
 function readVarint(buf, offset) {
-  let result = 0n;
-  let shift = 0n;
+  let result = 0;
+  let shift = 0;
   for (let i = offset; i < Math.min(buf.length, offset + 10); i++) {
-    const byte = BigInt(buf[i]);
-    result |= (byte & 0x7fn) << shift;
-    if ((byte & 0x80n) === 0n) return { value: Number(result), next: i + 1 };
-    shift += 7n;
+    const byte = buf[i];
+    result += (byte & 0x7f) * Math.pow(2, shift);
+    if ((byte & 0x80) === 0) return { value: result, next: i + 1 };
+    shift += 7;
   }
   return null;
 }
