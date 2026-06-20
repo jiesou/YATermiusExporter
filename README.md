@@ -124,6 +124,7 @@ Save the output to a file, then pass it with `--key-file`.
 ├── ssh_configs.json      per-host SSH config settings (raw Termius fields)
 ├── ssh_config            OpenSSH config (~/.ssh/config format, with ForwardAgent, ProxyJump, IdentityFile)
 ├── connections.csv       full connection history
+├── dump.json             all decrypted records as-is (raw dump)
 └── summary.json          export metadata
 ```
 

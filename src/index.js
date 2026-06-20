@@ -29,7 +29,7 @@ async function run(flags, outDir) {
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
   outDir = path.resolve(outDir);
 
-  const result = runAllExporters(data, hostMap, outDir);
+  const result = runAllExporters(data, hostMap, outDir, output);
   printSummary(result);
   console.error('\nDone:', outDir);
 }

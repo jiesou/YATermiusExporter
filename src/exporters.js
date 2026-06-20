@@ -322,6 +322,20 @@ function resolveIdentityFile(hd, idx, conn) {
   return null;
 }
 
+function writeRawDump(data, rawOutput, outputPath) {
+  const records = (rawOutput || []).map(r => {
+    const entry = { text: r.text || '' };
+    if (r.meta && Object.keys(r.meta).length) entry.meta = r.meta;
+    if (r.file) entry.file = r.file;
+    if (r.sequence != null) entry.sequence = r.sequence;
+    if (r.index != null) entry.index = r.index;
+    entry._decrypted = !!r.text && r.text.trim().length > 0;
+    return entry;
+  });
+  fs.writeFileSync(outputPath, JSON.stringify(records, null, 2) + '\n');
+  return records.length;
+}
+
 function addMetaComments(lines, groups, tags) {
   if (groups) lines.push(`    # Groups: ${groups}`);
   if (tags) lines.push(`    # Tags: ${tags}`);
@@ -375,7 +389,7 @@ function writeExtraHosts(lines, data, hostMap) {
   data.__extraHostCount = unique.size;
 }
 
-function runAllExporters(data, hostMap, outDir) {
+function runAllExporters(data, hostMap, outDir, rawOutput) {
   const result = {};
 
   const csvPath = path.join(outDir, 'hosts.csv');
@@ -405,6 +419,10 @@ function runAllExporters(data, hostMap, outDir) {
   const configCount = writeSshConfigFile(data, hostMap, outDir);
   if (configCount) result.sshConfig = { path: configPath, count: configCount };
 
+  const dumpPath = path.join(outDir, 'dump.json');
+  const dumpCount = writeRawDump(data, rawOutput, dumpPath);
+  if (dumpCount) result.dump = { path: dumpPath, count: dumpCount };
+
   const jsonPath = path.join(outDir, 'summary.json');
   result.summary = { path: jsonPath, ...writeFullJson(data, jsonPath) };
 
@@ -420,6 +438,7 @@ function printSummary(result) {
   if (result.portForwards) console.log(`    port_forwards.csv   ${result.portForwards.count} port forwards`);
   if (result.sshConfigs) console.log(`    ssh_configs.json    ${result.sshConfigs.count} SSH configs`);
   if (result.sshConfig) console.log(`    ssh_config          ${result.sshConfig.count} hosts (OpenSSH format)`);
+  if (result.dump) console.log(`    dump.json           ${result.dump.count} records (raw decrypted dump)`);
   if (result.connections) console.log(`    connections.csv     ${result.connections.count} connections`);
   if (result.summary) console.log(`    summary.json        metadata`);
 }
