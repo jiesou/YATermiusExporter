@@ -1,4 +1,4 @@
-# YetAnotherTermiusExporter
+# Yet Another Termius Exporter
 
 Export hosts, SSH keys, snippets, port forwards, SSH configs, and connection history from a Termius local database.
 
@@ -39,6 +39,7 @@ Key sources (pick one):
 ./yate --auto-flatpak
 ```
 With Linux's default Flatpak installation, you should be able to use `--auto-flatpak` and skip all the following descriptions.
+
 `--auto-flatpak` implies `--db-path .var/app/com.termius.Termius/config/Termius/IndexedDB/file__0.indexeddb.leveldb --key-is-in-db`
 
 ### 1. Get the IndexedDB LevelDB
