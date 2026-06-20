@@ -121,7 +121,7 @@ Save the output to a file, then pass it with `--key-file`.
 ├── ssh_keys/             SSH key pairs (.pem private + .pub public)
 ├── snippets.txt          saved command snippets
 ├── port_forwards.csv     port forwarding rules
-├── ssh_configs.csv       per-host SSH config settings
+├── ssh_configs.json      per-host SSH config settings (raw Termius fields)
 ├── ssh_config            OpenSSH config (~/.ssh/config format, with ForwardAgent, ProxyJump, IdentityFile)
 ├── connections.csv       full connection history
 └── summary.json          export metadata

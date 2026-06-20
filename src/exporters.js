@@ -97,21 +97,17 @@ function writeSshConfigs(data, outputPath) {
     });
   });
 
-  const keys = new Set();
-  data.sshConfigs.forEach(sc => Object.keys(sc).forEach(k => {
-    if (k.startsWith('__') || k === 'version') return;
-    keys.add(k);
-  }));
-  const headers = ['Host', ...keys].filter(k => !k.startsWith('_'));
-  const rows = [headers];
-  data.sshConfigs.forEach(sc => {
-    const label = scToLabel.get(sc) || firstString(sc, ['title', 'host', ...HOST_FIELDS]) || '<orphan>';
-    rows.push(headers.map(h => {
-      if (h === 'Host') return label;
-      return csvCell(valueToString(sc[h]));
-    }));
+  const records = data.sshConfigs.map(sc => {
+    const r = {};
+    Object.keys(sc).forEach(k => {
+      if (k.startsWith('__')) return;
+      r[k] = sc[k];
+    });
+    r._host = scToLabel.get(sc) || firstString(sc, ['title', 'host', ...HOST_FIELDS]) || null;
+    return r;
   });
-  fs.writeFileSync(outputPath, BOM + rows.map(r => r.join(',')).join('\n') + '\n');
+
+  fs.writeFileSync(outputPath, JSON.stringify(records, null, 2) + '\n');
   return data.sshConfigs.length;
 }
 
@@ -397,7 +393,7 @@ function runAllExporters(data, hostMap, outDir) {
   const pfCount = writePortForwards(data, pfPath);
   if (pfCount) result.portForwards = { path: pfPath, count: pfCount };
 
-  const scPath = path.join(outDir, 'ssh_configs.csv');
+  const scPath = path.join(outDir, 'ssh_configs.json');
   const scCount = writeSshConfigs(data, scPath);
   if (scCount) result.sshConfigs = { path: scPath, count: scCount };
 
@@ -422,7 +418,7 @@ function printSummary(result) {
   if (result.keys) console.log(`    ssh_keys/           ${result.keys.count} keys`);
   if (result.snippets) console.log(`    snippets.txt        ${result.snippets.count} snippets`);
   if (result.portForwards) console.log(`    port_forwards.csv   ${result.portForwards.count} port forwards`);
-  if (result.sshConfigs) console.log(`    ssh_configs.csv     ${result.sshConfigs.count} SSH configs`);
+  if (result.sshConfigs) console.log(`    ssh_configs.json    ${result.sshConfigs.count} SSH configs`);
   if (result.sshConfig) console.log(`    ssh_config          ${result.sshConfig.count} hosts (OpenSSH format)`);
   if (result.connections) console.log(`    connections.csv     ${result.connections.count} connections`);
   if (result.summary) console.log(`    summary.json        metadata`);
