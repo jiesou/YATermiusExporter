@@ -208,29 +208,20 @@ function writeSshHost(lines, h, label, idx) {
   const pj = resolveProxyJump(hd, sshConfigs, conn);
   const idPath = resolveIdentityFile(hd, idx, conn);
 
+  if (protocol === 'telnet' || protocol === 'mosh') {
+    lines.push(`# Host ${hostLabel}`);
+    lines.push(`#     HostName ${h.host}`);
+    if (port) lines.push(`#     Port ${port}`);
+    if (username) lines.push(`#     User ${username}`);
+    lines.push(`#     Protocol: ${protocol} — use ${protocol} client directly`);
+    if (groups) lines.push(`#     Groups: ${groups}`);
+    if (tags) lines.push(`#     Tags: ${tags}`);
+    lines.push('');
+    return;
+  }
+
   lines.push(`Host ${hostLabel}`);
   lines.push(`    HostName ${h.host}`);
-
-  if (protocol === 'mosh') {
-    if (port) lines.push(`    Port ${port}`);
-    if (username) lines.push(`    User ${username}`);
-    lines.push(`    # Protocol: mosh — not supported by OpenSSH, use mosh-client directly`);
-    const moshPort = sshConfigs.reduce((a, s) => s.mosh_server_command ? s.mosh_server_command : a, '');
-    if (moshPort) lines.push(`    # MoshServerCommand: ${moshPort}`);
-    addMetaComments(lines, groups, tags);
-    lines.push('');
-    return;
-  }
-
-  if (protocol === 'telnet') {
-    if (port) lines.push(`    Port ${port}`);
-    if (username) lines.push(`    User ${username}`);
-    lines.push(`    # Protocol: telnet — not supported by OpenSSH, use telnet client directly`);
-    addMetaComments(lines, groups, tags);
-    lines.push('');
-    return;
-  }
-
   if (port && port !== '22') lines.push(`    Port ${port}`);
   if (username) lines.push(`    User ${username}`);
   if (af) lines.push(`    ForwardAgent yes`);
@@ -350,16 +341,21 @@ function writeExtraHosts(lines, data, hostMap) {
     usedLabels.add(label);
 
     const tags = c.tags ? normalizeTags(c.tags) : '';
+    if (protocol === 'telnet' || protocol === 'mosh') {
+      lines.push(`# Host ${label}`);
+      lines.push(`#     HostName ${c.host}`);
+      if (c.port) lines.push(`#     Port ${c.port}`);
+      if (c.user_name) lines.push(`#     User ${c.user_name}`);
+      lines.push(`#     Protocol: ${protocol} — use ${protocol} client directly`);
+      if (tags) lines.push(`#     Tags: ${tags}`);
+      lines.push('');
+      return;
+    }
+
     lines.push(`Host ${label}`);
     lines.push(`    HostName ${c.host}`);
     if (c.port) lines.push(`    Port ${c.port}`);
     if (c.user_name) lines.push(`    User ${c.user_name}`);
-    if (protocol === 'mosh') {
-      if (c.mosh_server_command) lines.push(`    # MoshServerCommand: ${c.mosh_server_command}`);
-      lines.push(`    # Protocol: mosh — use mosh-client directly`);
-    } else if (protocol === 'telnet') {
-      lines.push(`    # Protocol: telnet — use telnet client directly`);
-    }
     if (tags) lines.push(`    # Tags: ${tags}`);
     lines.push('');
   });
