@@ -121,9 +121,10 @@ Save the output to a file, then pass it with `--key-file`.
 ├── ssh_keys/             SSH key pairs (.pem private + .pub public)
 ├── snippets.txt          saved command snippets
 ├── port_forwards.csv     port forwarding rules
-├── ssh_configs.json      per-host SSH config settings (raw Termius fields)
 ├── ssh_config            OpenSSH config (~/.ssh/config format, with ForwardAgent, ProxyJump, IdentityFile)
 ├── connections.csv       full connection history
+├── session-logs/         session log files (encrypted)
+├── session_logs.json     session log metadata (host, username, secretKey mapping)
 ├── dump.json             all decrypted records as-is (raw dump)
 └── summary.json          export metadata
 ```
