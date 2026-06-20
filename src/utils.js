@@ -20,6 +20,11 @@ const DIRECT_REFERENCE_ID_FIELDS = ['identity_id', 'identityId', 'credential_id'
 const NESTED_CREDENTIAL_FIELDS = ['identity', 'credential', 'credentials', 'auth', 'authentication', 'account', 'login_credentials', 'loginCredentials', 'ssh', 'ssh_config', 'sshConfig'];
 const CREDENTIAL_LABEL_FIELDS = ['identity', 'credential', 'credentials', 'account', 'identity_label', 'identityLabel', 'credential_label', 'credentialLabel', 'account_label', 'accountLabel'];
 const SSH_CONFIG_FIELDS = ['env_variables', 'envVariables', 'charset', 'agent_forwarding', 'agentForwarding', 'proxycommand', 'startup_snippet', 'startupSnippet', ...PORT_FIELDS];
+const AGENT_FORWARDING_FIELDS = ['agent_forwarding', 'agentForwarding'];
+const PROXY_HOST_FIELDS = ['proxy_hostname', 'proxyHostname', 'proxy_host', 'proxyHost'];
+const PROXY_PORT_FIELDS = ['proxy_port', 'proxyPort'];
+const PROXY_USER_FIELDS = ['proxy_username', 'proxyUsername'];
+const PROXY_COMMAND_FIELDS = ['proxy_command', 'proxyCommand', 'proxycommand'];
 const KEY_ID_FIELDS = ['key_id', 'keyId', 'private_key_id', 'privateKeyId'];
 const IDENTITY_ID_FIELDS = [...RECORD_ID_FIELDS, ...DIRECT_REFERENCE_ID_FIELDS];
 const ID_FIELDS = [...IDENTITY_ID_FIELDS, ...KEY_ID_FIELDS];
@@ -215,6 +220,18 @@ function makeUniqueLabel(map, preferredLabel, fallbackPrefix) {
   return label;
 }
 
+function boolValue(val) {
+  if (val === undefined || val === null) return false;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val === 1;
+  if (typeof val === 'string') return val === 'true' || val === '1' || val === 'yes';
+  return false;
+}
+
+function sanitizeHostLabel(label) {
+  return label.replace(/[^a-zA-Z0-9_.-]/g, '_');
+}
+
 function passwordFingerprint(password) {
   if (!password) return '';
   return `${password.length}:${crypto.createHash('sha256').update(password).digest('hex').slice(0, 12)}`;
@@ -228,12 +245,15 @@ module.exports = {
   RECORD_ID_FIELDS, DIRECT_REFERENCE_ID_FIELDS, NESTED_CREDENTIAL_FIELDS,
   CREDENTIAL_LABEL_FIELDS, SSH_CONFIG_FIELDS, KEY_ID_FIELDS,
   IDENTITY_ID_FIELDS, ID_FIELDS,
+  AGENT_FORWARDING_FIELDS, PROXY_HOST_FIELDS, PROXY_PORT_FIELDS,
+  PROXY_USER_FIELDS, PROXY_COMMAND_FIELDS,
   PRIVATE_KEY_RE, PUBLIC_HOST_KEY_RE, ENCRYPTED_BLOCK_RE,
   valueToString, firstValue, firstString, csvCell, csvRow,
   addToListMap, collectRecordIds, collectIds,
   passwordValueToString, firstPasswordString,
   extractPasswordFromObject, extractNestedCredentialPassword,
   extractPrivateKey, extractPassphrase, normalizePrivateKey,
-  normalizeProtocol, normalizeTags, makeUniqueLabel, passwordFingerprint,
+  normalizeProtocol, normalizeTags, makeUniqueLabel, boolValue,
+  sanitizeHostLabel, passwordFingerprint,
   SECRET_FIELD_RE
 };

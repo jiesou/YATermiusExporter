@@ -122,6 +122,7 @@ Save the output to a file, then pass it with `--key-file`.
 ├── snippets.txt          saved command snippets
 ├── port_forwards.csv     port forwarding rules
 ├── ssh_configs.csv       per-host SSH config settings
+├── ssh_config            OpenSSH config (~/.ssh/config format, with ForwardAgent, ProxyJump, IdentityFile)
 ├── connections.csv       full connection history
 └── summary.json          export metadata
 ```
