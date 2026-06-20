@@ -109,6 +109,28 @@ function applyMetaIds(obj, meta) {
   if (meta.local_id) obj.__termius_local_id = meta.local_id;
   if (meta.host_id) obj.__termius_host_id = meta.host_id;
   if (meta.visible_identity_id) obj.__termius_visible_identity_id = meta.visible_identity_id;
+  if (Array.isArray(meta.identity_object_ids) && meta.identity_object_ids.length) {
+    obj.__termius_identity_object_id = meta.identity_object_ids.at(-1);
+    obj.__termius_identity_object_ids = meta.identity_object_ids;
+  }
+  if (Array.isArray(meta.identity_object_local_ids) && meta.identity_object_local_ids.length) {
+    obj.__termius_identity_object_local_id = meta.identity_object_local_ids.at(-1);
+    obj.__termius_identity_object_local_ids = meta.identity_object_local_ids;
+  }
+  if (Array.isArray(meta.identity_object_refs) && meta.identity_object_refs.length) {
+    obj.__termius_identity_object_refs = meta.identity_object_refs;
+  }
+  if (Array.isArray(meta.ssh_config_object_ids) && meta.ssh_config_object_ids.length) {
+    obj.__termius_ssh_config_object_id = meta.ssh_config_object_ids.at(-1);
+    obj.__termius_ssh_config_object_ids = meta.ssh_config_object_ids;
+  }
+  if (Array.isArray(meta.ssh_config_object_local_ids) && meta.ssh_config_object_local_ids.length) {
+    obj.__termius_ssh_config_object_local_id = meta.ssh_config_object_local_ids.at(-1);
+    obj.__termius_ssh_config_object_local_ids = meta.ssh_config_object_local_ids;
+  }
+  if (Array.isArray(meta.ssh_config_object_refs) && meta.ssh_config_object_refs.length) {
+    obj.__termius_ssh_config_object_refs = meta.ssh_config_object_refs;
+  }
   if (Array.isArray(meta.nearby_ids)) obj.__termius_nearby_ids = meta.nearby_ids;
   if (meta.encryptedField) obj.__termius_encrypted_field = meta.encryptedField;
   return obj;
@@ -377,7 +399,19 @@ function resolveHostPassword(data, hd, preferredUsername) {
 
   const sshConfigs = sshConfigsForHostDefinition(data, hd);
   const identityIds = [];
+
   sshConfigs.forEach(sc => {
+    const refs = Array.isArray(sc.__termius_identity_object_refs)
+      ? sc.__termius_identity_object_refs : [];
+    refs.forEach(ref => {
+      (ref.ids || []).forEach(id => identityIds.push(String(id)));
+      (ref.localIds || []).forEach(id => identityIds.push(String(id)));
+    });
+
+    const objIds = Array.isArray(sc.__termius_identity_object_ids)
+      ? sc.__termius_identity_object_ids : [];
+    objIds.forEach(id => identityIds.push(String(id)));
+
     DIRECT_REFERENCE_ID_FIELDS.forEach(f => collectIds(sc[`_${f}`] || sc[f], DIRECT_REFERENCE_ID_FIELDS, identityIds));
   });
 
@@ -406,8 +440,31 @@ function extractNestedCredentialPassword(obj) {
 }
 
 function sshConfigsForHostDefinition(data, hd) {
-  if (!hd.__termius_ssh_config_object_ids) return data.sshConfigs;
-  const ids = new Set(hd.__termius_ssh_config_object_ids.map(String));
+  const refs = Array.isArray(hd.__termius_ssh_config_object_refs)
+    ? hd.__termius_ssh_config_object_refs : [];
+
+  const objectIds = Array.isArray(hd.__termius_ssh_config_object_ids)
+    ? hd.__termius_ssh_config_object_ids : [];
+
+  const ids = new Set([
+    ...refs.flatMap(ref => ref.ids),
+    ...refs.flatMap(ref => ref.localIds),
+    ...objectIds
+  ].map(String));
+
+  if (!ids.size) {
+    if (Array.isArray(hd.__termius_nearby_ids)) {
+      const nearbyIds = new Set(hd.__termius_nearby_ids.map(String));
+      return data.sshConfigs.filter(sc => {
+        if (Array.isArray(sc.__termius_nearby_ids)) {
+          return sc.__termius_nearby_ids.some(id => nearbyIds.has(String(id)));
+        }
+        return false;
+      });
+    }
+    return data.sshConfigs;
+  }
+
   return data.sshConfigs.filter(sc => collectRecordIds(sc).some(id => ids.has(id)));
 }
 

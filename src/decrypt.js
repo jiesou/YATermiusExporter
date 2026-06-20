@@ -76,12 +76,21 @@ function buildMeta(buffer, encryptedStart, encryptedEnd) {
   const relStart = encryptedStart - contextStart;
   const relEnd = encryptedEnd - contextStart;
 
+  const identityRefs = extractSerializedObjectRefs(context, relStart, relEnd, 'identity');
+  const sshConfigRefs = extractSerializedObjectRefs(context, relStart, relEnd, 'ssh_config');
+
   return {
     encryptedField: nearestFieldName(context, relStart),
     id: nearestFieldInteger(context, relStart, relEnd, 'id'),
     local_id: nearestFieldInteger(context, relStart, relEnd, 'local_id'),
     host_id: nearestFieldInteger(context, relStart, relEnd, 'host_id'),
     visible_identity_id: nearestFieldInteger(context, relStart, relEnd, 'visible_identity_id'),
+    identity_object_ids: identityRefs.flatMap(ref => ref.ids),
+    identity_object_local_ids: identityRefs.flatMap(ref => ref.localIds),
+    identity_object_refs: identityRefs.map(ref => ({ ids: ref.ids, localIds: ref.localIds, distance: ref.distance, side: ref.side })),
+    ssh_config_object_ids: sshConfigRefs.flatMap(ref => ref.ids),
+    ssh_config_object_local_ids: sshConfigRefs.flatMap(ref => ref.localIds),
+    ssh_config_object_refs: sshConfigRefs.map(ref => ({ ids: ref.ids, localIds: ref.localIds, distance: ref.distance, side: ref.side })),
     nearby_ids: readNearbyVarints(context, relStart, relEnd).map(e => e.value),
     nearby_id_entries: readNearbyVarints(context, relStart, relEnd).map(e => ({ value: e.value, distance: e.distance, side: e.side }))
   };
@@ -173,6 +182,32 @@ function dedupeByValue(entries) {
     if (!cur || e.dist < cur.dist) best.set(e.value, e);
   });
   return [...best.values()].sort((a, b) => a.dist - b.dist || a.value.localeCompare(b.value));
+}
+
+function extractSerializedObjectRefs(buffer, encryptedStart, encryptedEnd, objectName) {
+  const marker = Buffer.from(objectName);
+  const refs = [];
+  let pos = -1;
+
+  while ((pos = buffer.indexOf(marker, pos + 1)) !== -1) {
+    if (pos >= encryptedStart && pos < encryptedEnd) continue;
+    if (buffer[pos + marker.length] !== 0x6f) continue;
+
+    const objectStart = pos + marker.length + 1;
+    const objectEnd = Math.min(buffer.length, objectStart + 120);
+    const ids = extractFieldIntegersInRange(buffer, 'id', objectStart, objectEnd).map(e => e.value);
+    const localIds = extractFieldIntegersInRange(buffer, 'local_id', objectStart, objectEnd).map(e => e.value);
+
+    const d = distance(pos, encryptedStart, encryptedEnd);
+    refs.push({ ids, localIds, distance: d.dist, side: d.side });
+  }
+
+  return refs.sort((a, b) => a.distance - b.distance);
+}
+
+function extractFieldIntegersInRange(buffer, fieldName, start, end) {
+  return extractFieldIntegers(buffer, fieldName)
+    .filter(e => e.pos >= start && e.pos < end);
 }
 
 module.exports = { decryptEncryptedBlocks };

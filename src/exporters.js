@@ -84,17 +84,30 @@ function writePortForwards(data, outputPath) {
 
 function writeSshConfigs(data, outputPath) {
   if (!data.sshConfigs || !data.sshConfigs.length) return 0;
+
+  const scToLabel = new Map();
+  data.hostDefinitions.forEach(hd => {
+    if (!hd.__termius_nearby_ids) return;
+    const hdSet = new Set(hd.__termius_nearby_ids.map(String));
+    data.sshConfigs.forEach(sc => {
+      if (scToLabel.has(sc)) return;
+      if (sc.__termius_nearby_ids && sc.__termius_nearby_ids.some(id => hdSet.has(String(id)))) {
+        scToLabel.set(sc, hd.label || hd.address || '');
+      }
+    });
+  });
+
   const keys = new Set();
   data.sshConfigs.forEach(sc => Object.keys(sc).forEach(k => {
     if (k.startsWith('__') || k === 'version') return;
     keys.add(k);
   }));
-  const headers = ['Label', ...keys].filter(k => !k.startsWith('_'));
+  const headers = ['Host', ...keys].filter(k => !k.startsWith('_'));
   const rows = [headers];
   data.sshConfigs.forEach(sc => {
-    const label = firstString(sc, LABEL_FIELDS) || firstString(sc, ['address', 'hostname', ...HOST_FIELDS]) || '';
+    const label = scToLabel.get(sc) || firstString(sc, ['title', 'host', ...HOST_FIELDS]) || '<orphan>';
     rows.push(headers.map(h => {
-      if (h === 'Label') return label;
+      if (h === 'Host') return label;
       return csvCell(valueToString(sc[h]));
     }));
   });
@@ -204,6 +217,7 @@ function writeSshHost(lines, h, label, idx) {
   const username = resolveUser(h, conn, hd, idx);
   const tags = resolveTags(h, conn);
   const groups = h.groups || '';
+  const password = h.password || '';
   const af = resolveAgentForwarding(hd, sshConfigs, conn);
   const pj = resolveProxyJump(hd, sshConfigs, conn);
   const idPath = resolveIdentityFile(hd, idx, conn);
@@ -214,6 +228,7 @@ function writeSshHost(lines, h, label, idx) {
     if (port) lines.push(`#     Port ${port}`);
     if (username) lines.push(`#     User ${username}`);
     lines.push(`#     Protocol: ${protocol} — use ${protocol} client directly`);
+    if (password) lines.push(`#     Password: ${password}`);
     if (groups) lines.push(`#     Groups: ${groups}`);
     if (tags) lines.push(`#     Tags: ${tags}`);
     lines.push('');
@@ -227,6 +242,7 @@ function writeSshHost(lines, h, label, idx) {
   if (af) lines.push(`    ForwardAgent yes`);
   if (pj) lines.push(`    ProxyJump ${pj}`);
   if (idPath) lines.push(`    IdentityFile ${idPath}`);
+  if (password) lines.push(`    # Password: ${password}`);
   addMetaComments(lines, groups, tags);
   lines.push('');
 }
