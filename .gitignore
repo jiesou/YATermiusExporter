@@ -1,0 +1,10 @@
+node_modules/
+termius-export-output/
+output/
+*.csv
+*.json
+!package.json
+!package-lock.json
+ssh_keys/
+.DS_Store
+Thumbs.db

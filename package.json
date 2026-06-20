@@ -1,0 +1,23 @@
+{
+  "name": "yatermiusexporter",
+  "version": "1.0.0",
+  "description": "Yet Another Termius Exporter — export hosts, SSH keys, snippets, port forwards, and more from Termius local database",
+  "type": "commonjs",
+  "bin": {
+    "yate": "./bin/yate.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "keywords": ["termius", "export", "ssh", "backup", "migration"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiesou/YATermiusExporter"
+  },
+  "dependencies": {
+    "libsodium-wrappers": "^0.8.4",
+    "snappyjs": "^0.7.0"
+  }
+}
